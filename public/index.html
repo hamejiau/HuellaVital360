@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HuellaVital 360 | Centro Clínico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body class="text-slate-800">
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-black">HuellaVital<span class="text-indigo-400">360</span></h1>
+            <div class="flex items-center gap-6">
+                <div class="relative cursor-pointer hover:scale-110 transition" onclick="document.getElementById('modal-carrito').classList.remove('hidden')">
+                    <span class="text-2xl">🛒</span>
+                    <span id="badge-carrito" class="absolute -top-2 -right-2 bg-indigo-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-md">0</span>
+                </div>
+                <a href="admin.html" class="text-sm font-medium hover:text-indigo-400 transition hidden md:block">Acceso Profesionales</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="bg-slate-900 text-white relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-900 to-slate-900 opacity-90"></div>
+        <div class="relative max-w-7xl mx-auto px-6 py-16 text-center md:text-left">
+            <h2 class="text-4xl md:text-5xl font-black mb-4 leading-tight">Cuidado integral para tu <span class="text-indigo-400">mejor amigo.</span></h2>
+            <p class="text-lg text-slate-300 max-w-xl">Agrupe los servicios requeridos y gestione su reserva en un solo paso.</p>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-12">
+        <h2 class="text-3xl font-bold mb-8 text-slate-900">Catálogo de Servicios</h2>
+        <div id="contenedor-servicios" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            </div>
+    </main>
+
+    <div id="modal-carrito" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-end transition-all">
+        <div class="bg-white w-full max-w-md h-full shadow-2xl p-6 flex flex-col animate-[slideIn_0.3s_ease-out]">
+            <div class="flex justify-between items-center border-b pb-4 mb-4">
+                <h3 class="text-xl font-bold text-slate-900">Servicios Seleccionados</h3>
+                <button onclick="document.getElementById('modal-carrito').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
+            </div>
+            
+            <div id="lista-carrito" class="flex-grow overflow-y-auto space-y-3 mb-6 pr-2">
+                <p class="text-slate-400 text-center mt-10">Sin servicios agregados.</p>
+            </div>
+
+            <form id="form-cita" class="space-y-4 border-t pt-6">
+                <h4 class="font-bold text-slate-800">Datos de Agendamiento</h4>
+                <input type="text" id="propietario" placeholder="Propietario" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                <input type="text" id="mascota" placeholder="Paciente" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="date" id="fecha" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                    <input type="time" id="hora" min="08:00" max="18:00" required class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition" title="Horario: 08:00 a 18:00">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 hover:bg-indigo-600 text-white font-bold py-4 rounded-lg shadow-lg transition duration-300">Confirmar Reserva</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-notificacion" class="fixed bottom-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-24 opacity-0 transition-all duration-300 z-[100] flex items-center gap-4">
+        <div id="toast-icono" class="text-3xl">✅</div>
+        <div>
+            <h4 id="toast-titulo" class="font-bold text-lg leading-tight">Estado</h4>
+            <p id="toast-mensaje" class="text-sm opacity-90">Procesando...</p>
+        </div>
+    </div>
+
+    <script>
+        let carrito = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const contenedor = document.getElementById('contenedor-servicios');
+            try {
+                const res = await fetch('/api/servicios');
+
+                if (!res.ok) throw new Error('Servidor no disponible');
+                
+                const servicios = await res.json();
+
+                servicios.forEach(srv => {
+                    contenedor.innerHTML += `
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition duration-300 flex flex-col justify-between">
+                            <div>
+                                <div class="text-4xl mb-4">${srv.icono}</div>
+                                <span class="text-xs font-bold text-indigo-500 uppercase tracking-wider">${srv.categoria}</span>
+                                <h4 class="font-bold text-lg text-slate-900 mt-1 leading-tight">${srv.nombre}</h4>
+                            </div>
+                            <div>
+                                <p class="text-slate-900 font-black mt-4">$${srv.precio.toLocaleString()}</p>
+                                <button onclick="agregarAlCarrito('${srv.id}', '${srv.nombre}', ${srv.precio})" class="mt-4 w-full bg-slate-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-bold py-2 rounded-lg transition border border-indigo-100">
+                                    + Añadir
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("Init Error:", error);
+                                contenedor.innerHTML = `
+                    <div class="col-span-full bg-red-50 text-red-600 p-6 rounded-xl text-center font-bold border border-red-200 shadow-sm">
+                        ⚠️ Error de conexión: No se pudieron cargar las especialidades.<br>
+                        Asegúrate de iniciar el servidor (<code>node server.js</code>) y entrar desde <b>http://localhost:3000</b>
+                    </div>
+                `;
+            }
+
+            document.getElementById('form-cita').addEventListener('submit', agendarCita);
+        });
+
+        function agregarAlCarrito(id, nombre, precio) {
+            if (!carrito.some(item => item.id === id)) {
+                carrito.push({ id, nombre, precio });
+                actualizarUI();
+                const badge = document.getElementById('badge-carrito');
+                badge.classList.add('animate-ping');
+                setTimeout(() => badge.classList.remove('animate-ping'), 300);
+            }
+        }
+
+        function removerDelCarrito(id) {
+            carrito = carrito.filter(item => item.id !== id);
+            actualizarUI();
+        }
+
+        function actualizarUI() {
+            document.getElementById('badge-carrito').textContent = carrito.length;
+            const lista = document.getElementById('lista-carrito');
+            
+            if(carrito.length === 0) {
+                lista.innerHTML = '<p class="text-slate-400 text-center mt-10">Sin servicios agregados.</p>';
+                return;
+            }
+
+            let total = 0;
+            lista.innerHTML = carrito.map(item => {
+                total += item.precio;
+                return `
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <div class="flex-grow pr-2">
+                            <span class="font-semibold text-sm text-slate-800 block">${item.nombre}</span>
+                            <span class="text-xs text-indigo-600 font-bold">$${item.precio.toLocaleString()}</span>
+                        </div>
+                        <button onclick="removerDelCarrito('${item.id}')" class="text-slate-400 hover:text-red-500 font-bold text-lg w-8 h-8 flex items-center justify-center transition">&times;</button>
+                    </div>
+                `;
+            }).join('');
+
+            lista.innerHTML += `
+                <div class="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
+                    <span class="font-bold text-slate-600">Total Estimado:</span>
+                    <span class="font-black text-lg text-slate-900">$${total.toLocaleString()}</span>
+                </div>
+            `;
+        }
+
+        function mostrarNotificacion(titulo, mensaje, esError = false) {
+            const toast = document.getElementById('toast-notificacion');
+            
+            document.getElementById('toast-titulo').textContent = titulo;
+            document.getElementById('toast-mensaje').textContent = mensaje;
+            
+            if (esError) {
+                toast.classList.replace('bg-green-500', 'bg-red-500');
+                document.getElementById('toast-icono').textContent = '⚠️';
+            } else {
+                toast.classList.replace('bg-red-500', 'bg-green-500');
+                document.getElementById('toast-icono').textContent = '✅';
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-24', 'opacity-0'), 4000);
+        }
+
+        async function agendarCita(e) {
+            e.preventDefault();
+            if(carrito.length === 0) {
+                mostrarNotificacion('Operación denegada', 'Seleccione al menos un servicio.', true);
+                return;
+            }
+
+            const data = {
+                propietario: document.getElementById('propietario').value,
+                mascota: document.getElementById('mascota').value,
+                fecha: document.getElementById('fecha').value,
+                hora: document.getElementById('hora').value,
+                carritoIds: carrito.map(item => item.id)
+            };
+
+            try {
+                const res = await fetch('/api/citas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const resData = await res.json();
+
+                if (res.ok) {
+                    mostrarNotificacion('Confirmación', 'Reserva registrada exitosamente.');
+                    carrito = [];
+                    actualizarUI();
+                    document.getElementById('form-cita').reset();
+                    document.getElementById('modal-carrito').classList.add('hidden');
+                } else {
+                    mostrarNotificacion('Notificación del Sistema', resData.error, true);
+                }
+            } catch (error) {
+                console.error("Tx Error:", error);
+                mostrarNotificacion('Error', 'Fallo de conexión.', true);
+            }
+        }
+    </script>
+</body>
+</html>

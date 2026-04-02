@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HuellaVital 360 | Dashboard Profesional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }</style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col relative">
+    <nav class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-black">HuellaVital<span class="text-indigo-400">360</span> <span class="font-normal text-sm text-slate-400 ml-2 hidden sm:inline">| Control Clínico</span></h1>
+            <div class="flex gap-4 items-center">
+                <a href="index.html" class="text-sm font-medium hover:text-indigo-400 transition hidden sm:block">Módulo Clientes</a>
+                <button id="btn-logout" class="hidden bg-slate-800 hover:bg-rose-600 text-white text-sm font-bold py-2 px-4 rounded-lg transition">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="login-section" class="flex-grow flex items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="text-4xl mb-2">⚕️</div>
+                <h2 class="text-2xl font-black text-slate-900">Autenticación</h2>
+            </div>
+            <form id="form-login" class="space-y-4">
+                <input type="text" id="username" placeholder="Usuario" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                <input type="password" id="password" placeholder="Contraseña" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg transition">Acceder</button>
+                <p id="login-error" class="text-rose-500 text-sm text-center font-bold hidden bg-rose-50 p-3 rounded-lg">Acceso denegado.</p>
+            </form>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="hidden flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 border-b border-slate-200 pb-4 gap-4">
+            <div>
+                <h2 class="text-3xl font-black text-slate-900">Trazabilidad Operativa</h2>
+                <p class="text-slate-500 mt-1">Gestión integral de registros y exportación de datos.</p>
+            </div>
+            <div class="flex flex-wrap gap-3 items-center">
+                <select id="filtro-estado" onchange="renderizarTabla()" class="bg-white border border-slate-300 px-4 py-2.5 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="Pendiente">Visualizar Pendientes</option>
+                    <option value="Todas">Visualizar Historial</option>
+                </select>
+                <button onclick="descargarExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md transition flex items-center gap-2">
+                    📊 Exportar
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[900px]">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-widest border-b border-slate-200">
+                        <th class="p-5 font-bold w-16">ID</th>
+                        <th class="p-5 font-bold w-1/4">Registros Base</th>
+                        <th class="p-5 font-bold w-2/5">Detalle Operativo</th>
+                        <th class="p-5 font-bold w-1/5">Programación</th>
+                        <th class="p-5 font-bold w-1/5 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-citas" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="modal-confirm" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center transition-opacity opacity-0">
+        <div id="modal-box" class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full transform scale-95 transition-transform text-center">
+            <div id="modal-icono" class="text-4xl mb-4">❓</div>
+            <h3 class="text-xl font-bold text-slate-900 mb-2" id="modal-titulo">Requiere Confirmación</h3>
+            <p class="text-slate-500 mb-6 text-sm" id="modal-mensaje">Verifique la acción solicitada.</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="cerrarModal()" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition font-bold">Cancelar</button>
+                <button id="btn-confirmar-modal" class="w-full py-3 text-white rounded-xl transition font-bold shadow-lg">Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-notificacion" class="fixed bottom-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl transform translate-y-24 opacity-0 transition-all duration-300 z-[100] flex items-center gap-4">
+        <div id="toast-icono" class="text-3xl">✅</div>
+        <h4 id="toast-titulo" class="font-bold text-lg leading-tight">Proceso finalizado</h4>
+    </div>
+
+    <script>
+        const loginSection = document.getElementById('login-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const btnLogout = document.getElementById('btn-logout');
+
+        let dataGlobalCitas = [];
+        let accionPendiente = null;
+
+        function mostrarNotificacion(titulo, esError = false) {
+            const toast = document.getElementById('toast-notificacion');
+            document.getElementById('toast-titulo').textContent = titulo;
+            if (esError) {
+                toast.classList.replace('bg-green-500', 'bg-rose-500');
+                document.getElementById('toast-icono').textContent = '⚠️';
+            } else {
+                toast.classList.replace('bg-rose-500', 'bg-green-500');
+                document.getElementById('toast-icono').textContent = '✅';
+            }
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-24', 'opacity-0'), 3500);
+        }
+
+        function abrirModal(titulo, mensaje, icono, colorClase, accion) {
+            document.getElementById('modal-titulo').textContent = titulo;
+            document.getElementById('modal-mensaje').textContent = mensaje;
+            document.getElementById('modal-icono').textContent = icono;
+            
+            const btnConf = document.getElementById('btn-confirmar-modal');
+            btnConf.className = `w-full py-3 text-white rounded-xl transition font-bold shadow-lg ${colorClase}`;
+            
+            accionPendiente = accion;
+            const modal = document.getElementById('modal-confirm');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                document.getElementById('modal-box').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function cerrarModal() {
+            const modal = document.getElementById('modal-confirm');
+            modal.classList.add('opacity-0');
+            document.getElementById('modal-box').classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+            accionPendiente = null;
+        }
+
+        document.getElementById('btn-confirmar-modal').addEventListener('click', () => {
+            if (accionPendiente) accionPendiente();
+            cerrarModal();
+        });
+
+        if (localStorage.getItem('hv_token')) mostrarDashboard();
+
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('hv_token', data.token);
+                    mostrarDashboard();
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            } catch (error) { console.error("Auth Error:", error); }
+        });
+
+        btnLogout.addEventListener('click', () => {
+            localStorage.removeItem('hv_token');
+            location.reload();
+        });
+
+        function mostrarDashboard() {
+            loginSection.classList.add('hidden');
+            dashboardSection.classList.remove('hidden');
+            btnLogout.classList.remove('hidden');
+            cargarCitas();
+        }
+
+        async function cargarCitas() {
+            const token = localStorage.getItem('hv_token');
+            try {
+                const res = await fetch('/api/admin/citas', { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) { btnLogout.click(); return; }
+                dataGlobalCitas = await res.json();
+                renderizarTabla();
+            } catch (error) { 
+                console.error("Data Fetch Error:", error); 
+                mostrarNotificacion('Error de lectura', true);
+            }
+        }
+
+        function renderizarTabla() {
+            const filtro = document.getElementById('filtro-estado').value;
+            const tbody = document.getElementById('tabla-citas');
+            
+            const citasFiltradas = filtro === 'Pendiente' 
+                ? dataGlobalCitas.filter(c => c.estado === 'Pendiente')
+                : dataGlobalCitas;
+            
+            if (citasFiltradas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400 font-medium">No existen registros bajo estos parámetros.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = citasFiltradas.map(cita => {
+                let estadoUI, filaClase;
+                
+                if (cita.estado === 'Atendida') {
+                    filaClase = 'bg-slate-50 opacity-70';
+                    estadoUI = `<span class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg text-xs font-bold inline-block border border-indigo-200">Completada</span>`;
+                } else if (cita.estado === 'Cancelada') {
+                    filaClase = 'bg-rose-50/30 opacity-60';
+                    estadoUI = `<span class="bg-rose-100 text-rose-700 px-4 py-2 rounded-lg text-xs font-bold inline-block border border-rose-200">Anulada</span>`;
+                } else {
+                    filaClase = 'hover:bg-indigo-50 transition';
+                    estadoUI = `
+                        <div class="flex justify-center gap-2">
+                            <button onclick="solicitarCambio(${cita.id}, 'Atendida')" class="bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 border border-indigo-200 px-3 py-2 rounded-lg text-xs font-bold transition shadow-sm">Atender</button>
+                            <button onclick="solicitarCambio(${cita.id}, 'Cancelada')" class="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 border border-rose-200 px-3 py-2 rounded-lg text-xs font-bold transition shadow-sm">Cancelar</button>
+                        </div>
+                    `;
+                }
+
+                const serviciosText = cita.servicios ? cita.servicios.split(' + ').join('<br><span class="text-indigo-400 font-bold">+</span> ') : 'N/D';
+
+                return `
+                <tr class="${filaClase}">
+                    <td class="p-5 text-slate-400 font-mono text-sm">#00${cita.id}</td>
+                    <td class="p-5">
+                        <div class="font-black text-slate-900 text-lg ${cita.estado === 'Cancelada' ? 'line-through text-slate-400' : ''}">${cita.mascota || 'N/A'}</div>
+                        <div class="text-sm text-slate-500 font-medium mt-1">${cita.propietario || 'N/A'}</div>
+                    </td>
+                    <td class="p-5">
+                        <div class="font-medium text-slate-700 bg-white px-4 py-2 rounded-xl text-sm border border-slate-200 leading-relaxed shadow-sm">
+                            ${serviciosText}
+                        </div>
+                    </td>
+                    <td class="p-5">
+                        <div class="font-bold text-slate-800 text-base">${cita.fecha || 'N/A'}</div>
+                        <div class="text-sm text-slate-500 font-mono mt-1 bg-white inline-block px-2 py-1 rounded border border-slate-200">${cita.hora || 'N/A'}</div>
+                    </td>
+                    <td class="p-5 text-center align-middle">
+                        ${estadoUI}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function solicitarCambio(id, nuevoEstado) {
+            if (nuevoEstado === 'Atendida') {
+                abrirModal('Procesar', 'El registro se archivará como completado en la base de datos.', '⚕️', 'bg-indigo-600 hover:bg-indigo-700', () => ejecutarCambio(id, nuevoEstado));
+            } else {
+                abrirModal('Anular', 'La asignación será retirada de la programación activa.', '⚠️', 'bg-rose-600 hover:bg-rose-700', () => ejecutarCambio(id, nuevoEstado));
+            }
+        }
+
+        async function ejecutarCambio(id, nuevoEstado) {
+            const token = localStorage.getItem('hv_token');
+            try {
+                const res = await fetch(`/api/admin/citas/${id}/estado`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ estado: nuevoEstado })
+                });
+                
+                if (res.ok) {
+                    mostrarNotificacion(`Tx OK`);
+                    cargarCitas();
+                } else {
+                    mostrarNotificacion('Error en servidor', true);
+                }
+            } catch (error) { 
+                console.error("Tx Error:", error); 
+                mostrarNotificacion('Error de red', true);
+            }
+        }
+
+        function descargarExcel() {
+            if (dataGlobalCitas.length === 0) return alert('No hay datos para exportar.');
+            
+            let csv = 'ID,Propietario,Paciente,Servicios,Fecha Agendada,Hora,Estado,Fecha de Registro (Local)\n';
+            
+            dataGlobalCitas.forEach(c => {
+                const prop = c.propietario ? c.propietario.replace(/,/g, '') : 'N/A';
+                const masc = c.mascota ? c.mascota.replace(/,/g, '') : 'N/A';
+                const servs = c.servicios ? c.servicios.replace(/,/g, ' y ') : 'N/A';
+                const fecha = c.fecha || 'N/A';
+                const hora = c.hora || 'N/A';
+                const estado = c.estado || 'N/A';
+                
+                let fechaRegistroLocal = 'N/A';
+                if (c.fecha_creacion) {
+                    // Reemplazamos espacio por T y agregamos Z para forzar la lectura en UTC
+                    const fechaObj = new Date(c.fecha_creacion.replace(' ', 'T') + 'Z');
+                    fechaRegistroLocal = fechaObj.toLocaleString('es-CO');
+                }
+                
+                csv += `${c.id},${prop},${masc},${servs},${fecha},${hora},${estado},${fechaRegistroLocal}\n`;
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Auditoria_HuellaVital_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
